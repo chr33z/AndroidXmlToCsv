@@ -4,66 +4,129 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.LinkedList;
 
 import au.com.bytecode.opencsv.CSVWriter;
 
 import nu.xom.Builder;
-import nu.xom.Comment;
-import nu.xom.DocType;
 import nu.xom.Document;
 import nu.xom.Element;
-import nu.xom.Node;
-import nu.xom.ProcessingInstruction;
-import nu.xom.Text;
 import nu.xom.ParsingException;
-import nu.xom.jaxen.expr.EqualityExpr;
 
 public class Main {
 
 	static String path;
 
+	static String fileName;
+
 	static String origLanguage;
 
 	static String[] targetLanguages;
 
+	static final char DEL = '\t';
+
 	public static void main(String[] args){
 		if(processArguments(args)){
-			parseData();
+			try {
+				parseData();
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
 		} else {
-			System.out.println("usage: android2csv --path [path to files] --origLang [original language] --targetLangs [target1,target2,...]");
+			System.out.println("usage: android2csv --path [path to files] --origLang [original language]" +
+					" --targetLangs [target1,target2,...] --filename [filename]");
 		}
 	}
 
-	private static void parseData(){
-		ArrayList<File> files = getFilesFromDirectory(new File(path));
+	private static void parseData() throws IOException{
+		ArrayList<ArrayList<String>> table = new ArrayList<ArrayList<String>>();
+		int coloumns = targetLanguages.length + 3;
 
-		if(files.size() < 1){
-			System.out.println("There are no xml file in this directory.");
-		}
+		File csvFile = createCsvDirectory(path);
+		CSVWriter writer = new CSVWriter(new FileWriter(csvFile), DEL);
+		addHeaderToCsv(writer);
+
+		File sourcePath = new File(path);
+		File[] files = sourcePath.listFiles();
 
 		for (File file : files) {
-			try {
-				Builder parser = new Builder();
-				Document doc = parser.build(file);
-				Element root = doc.getRootElement();
-
-				ArrayList<String[]> list = AndroidXmlParser.readXmlStrings(root);
-
-				CSVWriter writer = new CSVWriter(new FileWriter("yourfile.csv"), '\t');
-				// feed in your array (or convert your data to an array)
+			if(file.isDirectory() && equalsSpecifiedLanguage(file.getName())){
+				ArrayList<File> xmlFiles = getXmlFilesFromDirectory(file);
 				
-				for (String[] strings : list) {
-					writer.writeNext(strings);
+				System.out.println("Found "+xmlFiles.size()+" files in directory \""+ file.getAbsolutePath() +"\". Crunching through...");
+
+				ArrayList<ArrayList<String>> langTable = new ArrayList<ArrayList<String>>();
+
+				for (File xmlFile : xmlFiles) {
+					if(xmlFile.isDirectory()) continue;
+
+					try {
+						Builder parser = new Builder();
+						Document doc = parser.build(xmlFile);
+						Element root = doc.getRootElement();
+
+						// get file contents
+						ArrayList<ArrayList<String>> xmlTable = new ArrayList<ArrayList<String>>();
+						AndroidXmlParser.readXmlStrings(root, xmlTable, coloumns);
+
+						for (ArrayList<String> arrayList : xmlTable) {
+							arrayList.add(0, xmlFile.getName());
+						}
+
+						AndroidXmlParser.appendTable(langTable, xmlTable);
+
+					} catch (ParsingException ex) {
+						System.err.println("Parsing error in file \""+xmlFile.getAbsolutePath()+"\"!");
+					}
+					catch (IOException ex) {
+						System.err.println("File \""+xmlFile.getAbsolutePath()+"\" might not exist or is broken");
+					}
 				}
-				writer.close();
-			}
-			catch (ParsingException ex) {
-				System.err.println("Cafe con Leche is malformed today. How embarrassing!");
-			}
-			catch (IOException ex) {
-				System.err.println("Could not connect to Cafe con Leche. The site may be down.");
+
+				// merge language in big table
+				AndroidXmlParser.mergeTables(table, langTable);
+
+			} else {
+				System.out.println("Directory "+file.getAbsolutePath()+" has not the right format. Try renaming it like a target language you chose.");
 			}
 		}
+		
+		System.out.println(csvFile.getAbsolutePath());
+		for (ArrayList<String> row : table) {
+			writer.writeNext(row.toArray(new String[row.size()]));
+		}
+		writer.close();
+	}
+
+	private static void addHeaderToCsv(CSVWriter writer){
+		if(writer != null){
+			ArrayList<String> header = new ArrayList<String>();
+			header.add("filename");
+			header.add("stringname");
+			header.add(origLanguage);
+			for (String lang : targetLanguages) {
+				header.add(lang);
+			}
+			writer.writeNext(header.toArray(new String[header.size()]));
+		}
+	}
+
+	private static File createCsvDirectory(String path){
+		File newDir = new File(path + "csv/");
+		newDir.mkdir();
+		
+		String tmp = newDir.getAbsolutePath() + "/" + ((fileName != null) ? fileName : "androidStringResources") +".csv";
+		return new File(tmp);
+	}
+
+	private static boolean equalsSpecifiedLanguage(String name){
+		boolean result = false;
+		for (String string : targetLanguages) {
+			if(name.equals(string)) result = true;
+		}
+		if(origLanguage.equals(name)) result = true;
+
+		return result;
 	}
 
 	private static boolean processArguments(String[] args){
@@ -76,7 +139,10 @@ public class Main {
 				origLanguage = args[i+1];
 			}
 			else if(args[i].equals("--targetLangs") && args.length > i){
-				targetLanguages = args[i+1].split(",");
+				targetLanguages = args[i+1].trim().split(",");
+			}
+			else if(args[i].equals("--filename") && args.length > i){
+				fileName = args[i+1];
 			}
 		}
 
@@ -90,17 +156,12 @@ public class Main {
 	/*
 	 * Read directory contents
 	 */
-	private static ArrayList<File> getFilesFromDirectory(File directory){
-		System.out.println(directory.getAbsolutePath());
-
+	private static ArrayList<File> getXmlFilesFromDirectory(File directory){
 		File[] files = directory.listFiles();
 
 		ArrayList<File> results = new ArrayList<File>();
 
 		for (File inFile : files) {
-
-			System.out.println(inFile.getName());
-
 			if (!inFile.isDirectory()) {
 				String fileName = inFile.getName();
 
