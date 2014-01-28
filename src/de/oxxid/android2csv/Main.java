@@ -1,8 +1,11 @@
 package de.oxxid.android2csv;
 
 import java.io.File;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
+
+import au.com.bytecode.opencsv.CSVWriter;
 
 import nu.xom.Builder;
 import nu.xom.Comment;
@@ -43,7 +46,16 @@ public class Main {
 				Builder parser = new Builder();
 				Document doc = parser.build(file);
 				Element root = doc.getRootElement();
-				readXmlStrings(root);
+
+				ArrayList<String[]> list = AndroidXmlParser.readXmlStrings(root);
+
+				CSVWriter writer = new CSVWriter(new FileWriter("yourfile.csv"), '\t');
+				// feed in your array (or convert your data to an array)
+				
+				for (String[] strings : list) {
+					writer.writeNext(strings);
+				}
+				writer.close();
 			}
 			catch (ParsingException ex) {
 				System.err.println("Cafe con Leche is malformed today. How embarrassing!");
@@ -51,32 +63,6 @@ public class Main {
 			catch (IOException ex) {
 				System.err.println("Could not connect to Cafe con Leche. The site may be down.");
 			}
-		}
-
-
-
-
-	}
-
-	public static void readXmlStrings(Node current) {
-
-		String data = "";
-		if (current instanceof Element) {
-			Element temp = (Element) current;
-			
-			System.out.println(temp.getLocalName());
-			
-			if(temp.getLocalName().equals("string")){
-			}
-		}
-		else if (current instanceof Text) {
-			String value = current.getValue();
-			System.out.println(value);
-		}
-
-		// Attributes are never returned by getChild()
-		for (int i = 0; i < current.getChildCount(); i++) {
-			readXmlStrings(current.getChild(i));
 		}
 	}
 
@@ -106,26 +92,26 @@ public class Main {
 	 */
 	private static ArrayList<File> getFilesFromDirectory(File directory){
 		System.out.println(directory.getAbsolutePath());
-		
+
 		File[] files = directory.listFiles();
 
 		ArrayList<File> results = new ArrayList<File>();
 
 		for (File inFile : files) {
-			
+
 			System.out.println(inFile.getName());
-			
+
 			if (!inFile.isDirectory()) {
 				String fileName = inFile.getName();
-				
+
 				// if file ends on ".xml"
 				String extension = "";
 				int i = fileName.lastIndexOf('.');
 				int p = Math.max(fileName.lastIndexOf('/'), fileName.lastIndexOf('\\'));
 				if (i > p) {
-				    extension = fileName.substring(i+1);
+					extension = fileName.substring(i+1);
 				}
-				
+
 				if(extension.equals("xml")){
 					results.add(inFile);
 				}
