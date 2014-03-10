@@ -1,10 +1,16 @@
 package de.oxxid.android2csv;
 
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.LinkedList;
+import java.util.HashMap;
+import java.util.List;
+
+import javax.management.modelmbean.XMLParseException;
 
 import au.com.bytecode.opencsv.CSVWriter;
 
@@ -24,21 +30,27 @@ public class Main {
 	static String[] targetLanguages;
 
 	static final char DEL = '\t';
-
+	
 	public static void main(String[] args){
-		if(processArguments(args)){
+		if(processArgumentsImport(args)){
 			try {
-				parseData();
+				dataToCsv();
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
-		} else {
-			System.out.println("usage: android2csv --path [path to files] --origLang [original language]" +
+		} else if(processArgumentsExport(args)){
+			try {
+				CsvToXml.dataToXml(path);
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+		}else {
+			System.out.println("usage: android2csv --toCsv --toXml --path [path to file(s)] --origLang [original language]" +
 					" --targetLangs [target1,target2,...] --filename [filename]");
 		}
 	}
 
-	private static void parseData() throws IOException{
+	private static void dataToCsv() throws IOException{
 		ArrayList<ArrayList<String>> table = new ArrayList<ArrayList<String>>();
 		int coloumns = targetLanguages.length + 3;
 
@@ -52,7 +64,7 @@ public class Main {
 		for (File file : files) {
 			if(file.isDirectory() && equalsSpecifiedLanguage(file.getName())){
 				ArrayList<File> xmlFiles = getXmlFilesFromDirectory(file);
-				
+
 				System.out.println("Found "+xmlFiles.size()+" files in directory \""+ file.getAbsolutePath() +"\". Crunching through...");
 
 				ArrayList<ArrayList<String>> langTable = new ArrayList<ArrayList<String>>();
@@ -90,13 +102,15 @@ public class Main {
 				System.out.println("Directory "+file.getAbsolutePath()+" has not the right format. Try renaming it like a target language you chose.");
 			}
 		}
-		
+
 		System.out.println(csvFile.getAbsolutePath());
 		for (ArrayList<String> row : table) {
 			writer.writeNext(row.toArray(new String[row.size()]));
 		}
 		writer.close();
 	}
+
+	
 
 	private static void addHeaderToCsv(CSVWriter writer){
 		if(writer != null){
@@ -114,7 +128,7 @@ public class Main {
 	private static File createCsvDirectory(String path){
 		File newDir = new File(path + "csv/");
 		newDir.mkdir();
-		
+
 		String tmp = newDir.getAbsolutePath() + "/" + ((fileName != null) ? fileName : "androidStringResources") +".csv";
 		return new File(tmp);
 	}
@@ -128,9 +142,28 @@ public class Main {
 
 		return result;
 	}
-
-	private static boolean processArguments(String[] args){
+	
+	private static boolean processArgumentsExport(String[] args){
+		boolean toXml = false;
+		
 		for (int i=0; i<args.length; i++) {
+			if(!args[i].equals("--toXml")){
+				toXml = true;
+			}
+			if(args[i].equals("--path") && args.length > i){
+				path = args[i+1];
+				i++;
+			}
+		}
+		if(path == null || path.equals("") || !toXml) return false;
+		return true;
+	}
+
+	private static boolean processArgumentsImport(String[] args){
+		for (int i=0; i<args.length; i++) {
+			if(!args[i].equals("--toCsv")){
+				return false;
+			}
 			if(args[i].equals("--path") && args.length > i){
 				path = args[i+1];
 				i++;
