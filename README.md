@@ -1,18 +1,18 @@
-AndroidXmlToCsv
+Andriod Metaphrase
 ===============
 
-AndroidXmlToCsv is a simple java app that converts android string xml files to a single csv and back the other way round. The goal of this app is to provide a simple way to share a csv to collaborate translation of android strings.
+Andriod Metaphrase is a simple java tool that helps preparing android strings for translation. It can either create a csv file from a specified source language or creates multiple xml string files from a given csv table.
 
-###Usage xml to csv
-Simply create a folder with subfolders for every language you want to translate from, e.g. "de" and "en".
+###Convert Android XML files to CSV table
+#[info] Each string file in your android project has to be in values folder with a valid locale suffix like "values-en" or "values-de". String files within the "values" folder are NOT considered
 
-Start the process with the following parameters:
+Start the tool with the following parameters:
 
 ```
---path [path to folder] --origLang [original language] --targetLangs [target languages] --filename [name of the csv file]
+android-metaphrase --to-csv --project-directory [android project directory] --orig-lang [locale] --target-langs [locale1,locale2,...] --path-csv [absolute path of csv file]"
 ```
 
-The app creates a subfolder '''csv/''' where the result is stored.
+The tool creates a csv table with the columns ```filename, stringname, locale. locale1, locale2, ...```
 
 ### Usage csv to xml
 

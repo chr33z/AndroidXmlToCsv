@@ -1,90 +1,86 @@
 package de.oxxid.android2csv;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileReader;
-import java.io.FileWriter;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-
-import javax.management.modelmbean.XMLParseException;
-
-import au.com.bytecode.opencsv.CSVWriter;
-
-import nu.xom.Builder;
-import nu.xom.Document;
-import nu.xom.Element;
-import nu.xom.ParsingException;
 
 public class Main {
 
-	static String pathCsv;
+	/** absolute path of csv file - optional */
+	static String pathCsvFile;
 	
-	static String pathDirectoryXml;
+	/** name of csv file - optional */
+	static String fileNameCsv;
+	
+	/** path to android project folder */
+	static String pathProjectDirectory;
 
 	static String fileName;
 
+	/** original language used as first column an csv */
 	static String origLanguage;
 
+	/** target languages */
 	static String[] targetLanguages;
 
 	public static void main(String[] args){
-		if(processArgumentsImport(args)){
+		if(processArgumentsXmlToCsv(args)){
 			try {
-				XmlToCsv.dataToCsv(pathDirectoryXml, fileName, origLanguage, targetLanguages);
+				XmlToCsv.dataToCsv(pathProjectDirectory, pathCsvFile, origLanguage, targetLanguages);
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
-		} else if(processArgumentsExport(args)){
+		} else if(processArgumentsCsvToXml(args)){
 			try {
-				CsvToXml.dataToXml(pathCsv);
+				CsvToXml.dataToXml(pathCsvFile);
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
-		} else if(processArgumentsMerge(args)){
+		} else if(processArgumentsMergeXmlInCsv(args)){
 			try {
-				MergeInCsv.mergeInCsv(pathDirectoryXml, pathCsv, origLanguage, targetLanguages);
+				MergeInCsv.mergeInCsv(pathProjectDirectory, pathCsvFile, origLanguage, targetLanguages);
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
 		}else {
-			System.out.println("usage: android2csv --toCsv --toXml --path [path to file(s)] --origLang [original language]" +
-					" --targetLangs [target1,target2,...] --filename [filename]");
+			System.out.println(
+					"usage XML to CSV: android-metaphrase --to-csv --project-directory --orig-lang [original language]" +
+					" --target-langs [target1,target2,...] --path-csv [path of output csv file]" + "\n\n" +
+					
+					"usage CSV to XML: android2csv --to-xml --file-csv --target-langs [target1,target2,...] --path-xml [path of output xml files]" + "\n\n" +
+					
+					"usage MERGE XML in CSV: android2csv --merge --file-csv --project-directory --target-langs [target1,target2,...]"
+			);
 		}
 	}
 
-	private static boolean processArgumentsExport(String[] args){
+	private static boolean processArgumentsCsvToXml(String[] args){
 		boolean toXml = false;
 		
 		for (int i=0; i<args.length; i++) {
-			if(args[i].equals("--toXml")){
+			if(args[i].equals("--to-xml")){
 				toXml = true;
 			}
-			if(args[i].equals("--csvFile") && args.length > i){
-				pathCsv = args[i+1];
+			if(args[i].equals("--file-csv") && args.length > i){
+				pathCsvFile = args[i+1];
 				i++;
 			}
 		}
-		if(pathCsv == null || pathCsv.equals("") || !toXml) return false;
+		if(pathCsvFile == null || pathCsvFile.equals("") || !toXml) return false;
 		return true;
 	}
 	
-	private static boolean processArgumentsMerge(String[] args){
+	private static boolean processArgumentsMergeXmlInCsv(String[] args){
 		boolean merge = false;
 		
 		for (int i=0; i<args.length; i++) {
 			if(args[i].equals("--merge")){
 				merge = true;
 			}
-			if(args[i].equals("--directoryXml") && args.length > i){
-				pathDirectoryXml = args[i+1];
+			if(args[i].equals("--project-directory") && args.length > i){
+				pathProjectDirectory = args[i+1];
 				i++;
 			}
-			if(args[i].equals("--csvFile") && args.length > i){
-				pathCsv = args[i+1];
+			if(args[i].equals("--file-csv") && args.length > i){
+				pathCsvFile = args[i+1];
 				i++;
 			}
 			else if(args[i].equals("--targetLangs") && args.length > i){
@@ -95,8 +91,8 @@ public class Main {
 			}
 		}
 
-		if(	pathCsv == null || pathCsv.equals("") || 
-			pathDirectoryXml == null || pathDirectoryXml.equals("") || 
+		if(	pathCsvFile == null || pathCsvFile.equals("") || 
+			pathProjectDirectory == null || pathProjectDirectory.equals("") || 
 			!merge){
 			
 			return false;
@@ -108,31 +104,34 @@ public class Main {
 		return true;
 	}
 
-	private static boolean processArgumentsImport(String[] args){
+	private static boolean processArgumentsXmlToCsv(String[] args){
+//		"usage XML to CSV: android2csv --to-csv --project-directory --orig-lang [original language]" +
+//				" --target-langs [target1,target2,...] --path-csv [path of output csv file]" + "\n\n" +
+		
 		boolean toCsv = false;
 		
 		for (int i=0; i<args.length; i++) {
-			if(!args[i].equals("--toCsv")){
+			if(args[i].equals("--to-csv")){
 				toCsv = true;
 			}
-			if(args[i].equals("--path") && args.length > i){
-				pathDirectoryXml = args[i+1];
+			if(args[i].equals("--project-directory") && args.length > i+1){
+				pathProjectDirectory = args[i+1];
 				i++;
 			}
-			else if(args[i].equals("--origLang") && args.length > i){
+			else if(args[i].equals("--orig-lang") && args.length > i+1){
 				origLanguage = args[i+1];
 			}
-			else if(args[i].equals("--targetLangs") && args.length > i){
+			else if(args[i].equals("--target-langs") && args.length > i+1){
 				targetLanguages = args[i+1].trim().split(",");
 			}
-			else if(args[i].equals("--filename") && args.length > i){
-				fileName = args[i+1];
+			else if(args[i].equals("--path-csv") && args.length > i+1){
+				pathCsvFile = args[i+1];
 			}
 		}
 
-		if(pathDirectoryXml == null || pathDirectoryXml.equals("")) return false;
-		if(origLanguage == null || origLanguage.equals("")) return false;
-		if(targetLanguages == null || targetLanguages.length < 1) return false;
+//		if(pathProjectDirectory == null || pathProjectDirectory.equals("") || !toCsv) return false;
+//		if(origLanguage == null || origLanguage.equals("")) return false;
+//		if(targetLanguages == null || targetLanguages.length < 1) return false;
 
 		return true;
 	}
