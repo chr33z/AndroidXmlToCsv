@@ -42,7 +42,7 @@ public class Main {
 			}
 		}else {
 			System.out.println(
-					"usage XML to CSV: android2csv --to-csv --project-directory --orig-lang [original language]" +
+					"usage XML to CSV: android-metaphrase --to-csv --project-directory --orig-lang [original language]" +
 					" --target-langs [target1,target2,...] --path-csv [path of output csv file]" + "\n\n" +
 					
 					"usage CSV to XML: android2csv --to-xml --file-csv --target-langs [target1,target2,...] --path-xml [path of output xml files]" + "\n\n" +
