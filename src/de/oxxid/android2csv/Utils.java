@@ -92,4 +92,14 @@ public class Utils {
 		}
 
 	}
+	
+	public static boolean isValidFile(File file){
+		if (!file.isDirectory())
+		   file = file.getParentFile();
+		if (file.exists()){
+		    return true;
+		} else {
+			return false;
+		}
+	}
 }

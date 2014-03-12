@@ -29,22 +29,33 @@ public class CsvToXml {
 	 * @param path path to csv file
 	 * @throws IOException
 	 */
-	public static void dataToXml(String path) throws IOException{
-		File csvFile = new File(path);
-
+	public static void dataToXml(String pathCsvFile, String pathXmlDirectory, String[] targetLanguages) throws IOException{
+		
+		// get csv file
+		File csvFile = new File(pathCsvFile);
 		if(!csvFile.exists()){
-			System.out.println("[ERROR]: Specified csv file does not exist!");
+			System.out.println("[ERROR]: CSV file" + csvFile + "does not exist!");
+			return;
+		}
+		
+		File xmlDirectory = getXmlDirectory(pathXmlDirectory);
+		if(xmlDirectory != null){
+			System.out.println("Created XML directory at " + xmlDirectory);
+		} else {
+			System.out.println("[ERROR]: Could not create XML folder " + pathXmlDirectory);
 			return;
 		}
 
 		/* store a map containing a list of strings for each locale */
 		HashMap<String, List<String>> fileMap = new HashMap<String, List<String>>();
+		
 		/* store indices of language columns */
 		HashMap<Integer, String> indexMap;
+		
 		/* Store lines of csv file as string array of all cells */
 		ArrayList<String[]> csvlines = readCsvLines(csvFile, CSV_DELIMITER);
 		
-		indexMap = getIndexMap(csvlines);
+		indexMap = getIndexMap(csvlines, targetLanguages);
 		
 		for (int i = 1; i < csvlines.size(); i++) {
 			String[] strings = csvlines.get(i);
@@ -72,31 +83,62 @@ public class CsvToXml {
 	}
 	
 	/**
+	 * Get the xml folder where all files are stored and create parent folders if necessary
+	 * @param path path to xml folder
+	 * @return xml directory
+	 */
+	private static File getXmlDirectory(String path){
+		if(path == null || path.equals("")){
+			path = "androidStringResources.csv";
+		}
+		
+		File csvFile = new File(path);
+		File parentFile = csvFile.getParentFile();
+		
+		if(!parentFile.exists() && !parentFile.mkdirs()){
+		    return null;
+		}
+		return csvFile;
+	}
+	
+	/**
 	 * Builds an valid android string item
 	 * @return an xml string item for android strings
 	 */
 	private static String buildStringItem(String id, String value){
 		String result = stringItem;
 		
-		result = result.replace("%id%", id);
-		result = result.replace("%value%", value);
+		result = result.replace("%id%", id.replace("\"", ""));
+		result = result.replace("%value%", value.replace("\"", ""));
 		return result;
 	}
 
 	/**
+	 * Create an index of locales that should be exported
 	 * @param csvlines
 	 * @return a map containing the locale and the column index
 	 */
-	private static HashMap<Integer, String> getIndexMap(
-			ArrayList<String[]> csvlines) {
+	private static HashMap<Integer, String> getIndexMap(ArrayList<String[]> csvlines, String[] targetLanguages) {
 		HashMap<Integer, String> indexMap = new HashMap<Integer, String>();
 		
 		if(csvlines != null && csvlines.size() > 0){
 			String[] firstLine = csvlines.get(0);
 			
-			if(firstLine.length > 2){
-				for (int i = 2; i < firstLine.length; i++) {
-					indexMap.put(i, firstLine[i]);
+			if(targetLanguages == null){
+				if(firstLine.length > 2){
+					for (int i = 2; i < firstLine.length; i++) {
+						indexMap.put(i, firstLine[i].replace("\"", ""));
+					}
+				}
+			} else {
+				if(firstLine.length > 2){
+					for (int i = 2; i < firstLine.length; i++) {
+						for (int j = 0; j < targetLanguages.length; j++) {
+							if(targetLanguages[j].equals(firstLine[i].replace("\"", ""))){
+								indexMap.put(i, firstLine[i].replace("\"", ""));
+							}
+						}
+					}
 				}
 			}
 		}
@@ -116,6 +158,7 @@ public class CsvToXml {
 					lines.add(line.split(delimiter));
 				}
 			}
+			reader.close();
 		} catch (FileNotFoundException e) {
 			throw new RuntimeException("File not found");
 		} catch (IOException e) {
@@ -151,17 +194,28 @@ public class CsvToXml {
 			
 			FileWriter fileWriter = null;
 	        try {
-	            File stringFile = new File(directoryPath + "/" + fileName);
-	            fileWriter = new FileWriter(stringFile);
+	            File stringFile = new File(directoryPath + "/values-" + localeEntry.getKey() + "/" + fileName);
+	    		File parentFile = stringFile.getParentFile();
+	    		
+	    		if(!parentFile.exists()){
+	    			if(!parentFile.mkdirs()){
+	    				System.out.println("[ERROR]: Could not create file " + stringFile);
+	    			}
+	    		}
+    			fileWriter = new FileWriter(stringFile);
 	            fileWriter.write(result);
 	            fileWriter.close();
+	            System.out.println("Wrote XML file to " + stringFile);
+	            
 	        } catch (IOException ex) {
-	            System.out.println(ex);
+	            System.out.println("[ERROR]: " + ex.getLocalizedMessage());
 	        } finally {
 	            try {
 	                fileWriter.close();
 	            } catch (IOException ex) {
+	            	System.out.println("[ERROR]: " + ex.getLocalizedMessage());
 	            	System.out.println(ex);
+	            } catch(NullPointerException ex){
 	            }
 	        }
 		}

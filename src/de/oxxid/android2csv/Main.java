@@ -10,6 +10,9 @@ public class Main {
 	/** name of csv file - optional */
 	static String fileNameCsv;
 	
+	/** path to xml directory */
+	static String pathXmlDirectory;
+	
 	/** path to android project folder */
 	static String pathProjectDirectory;
 
@@ -30,7 +33,7 @@ public class Main {
 			}
 		} else if(processArgumentsCsvToXml(args)){
 			try {
-				CsvToXml.dataToXml(pathCsvFile);
+				CsvToXml.dataToXml(pathCsvFile, pathXmlDirectory, targetLanguages);
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
@@ -45,9 +48,9 @@ public class Main {
 					"usage XML to CSV: android-metaphrase --to-csv --project-directory --orig-lang [original language]" +
 					" --target-langs [target1,target2,...] --path-csv [path of output csv file]" + "\n\n" +
 					
-					"usage CSV to XML: android2csv --to-xml --file-csv --target-langs [target1,target2,...] --path-xml [path of output xml files]" + "\n\n" +
+					"usage CSV to XML: android-metaphrase --to-xml --path-csv [path of output csv file] --target-langs [target1,target2,...] --xml-directory [directory where the xml files are stored]" + "\n\n" +
 					
-					"usage MERGE XML in CSV: android2csv --merge --file-csv --project-directory --target-langs [target1,target2,...]"
+					"usage MERGE XML in CSV: android-metaphrase --merge --file-csv --project-directory --target-langs [target1,target2,...]"
 			);
 		}
 	}
@@ -59,12 +62,20 @@ public class Main {
 			if(args[i].equals("--to-xml")){
 				toXml = true;
 			}
-			if(args[i].equals("--file-csv") && args.length > i){
+			if(args[i].equals("--path-csv") && args.length > i+1){
 				pathCsvFile = args[i+1];
 				i++;
 			}
+			if(args[i].equals("--targetLangs") && args.length > i+1){
+				targetLanguages = args[i+1].trim().split(",");
+			}
+			if(args[i].equals("--xml-directory") && args.length > i+1){
+				pathXmlDirectory = args[i+1];
+			}
 		}
-		if(pathCsvFile == null || pathCsvFile.equals("") || !toXml) return false;
+		if(!toXml) return false;
+		if(pathCsvFile == null || pathCsvFile.equals("")) return false;
+		if(pathXmlDirectory == null || pathXmlDirectory.equals("")) return false;
 		return true;
 	}
 	
@@ -128,10 +139,10 @@ public class Main {
 				pathCsvFile = args[i+1];
 			}
 		}
-
-//		if(pathProjectDirectory == null || pathProjectDirectory.equals("") || !toCsv) return false;
-//		if(origLanguage == null || origLanguage.equals("")) return false;
-//		if(targetLanguages == null || targetLanguages.length < 1) return false;
+		if(!toCsv) return false;
+		if(pathProjectDirectory == null || pathProjectDirectory.equals("")) return false;
+		if(origLanguage == null || origLanguage.equals("")) return false;
+		if(targetLanguages == null || targetLanguages.length < 1) return false;
 
 		return true;
 	}

@@ -26,11 +26,11 @@ public class XmlToCsv {
 			String[] targetLanguages) throws IOException{
 		
 		// create csv file and add a header to the file
-		File csvFile = createCsvFile(pathCsvFile);
+		File csvFile = getCsvFile(pathCsvFile);
 		if(csvFile != null){
-			System.out.println("Created csv file at " + csvFile);
+			System.out.println("Created CSV file at " + csvFile);
 		} else {
-			System.out.println("Couldn't create file: " + pathCsvFile);
+			System.out.println("[ERROR]: Couldn't create file: " + pathCsvFile);
 			return;
 		}
 		
@@ -39,7 +39,7 @@ public class XmlToCsv {
 		if(androidResourceDirectory != null){
 			System.out.println("Found resource at " + androidResourceDirectory);
 		} else {
-			System.out.println("Couldn't find android resource folder in: " + new File(pathProjectDirectory));
+			System.out.println("[ERROR]: Couldn't find android resource folder in: " + new File(pathProjectDirectory));
 			return;
 		}
 		
@@ -80,10 +80,10 @@ public class XmlToCsv {
 						langTable.addAll(xmlTable);
 
 					} catch (ParsingException ex) {
-						System.err.println("Parsing error in file \""+xmlFile.getAbsolutePath()+"\"!");
+						System.err.println("[ERROR]: Parsing error in file \""+xmlFile.getAbsolutePath()+"\"!");
 					}
 					catch (IOException ex) {
-						System.err.println("File \""+xmlFile.getAbsolutePath()+"\" might not exist or is broken");
+						System.err.println("[ERROR]: File \""+xmlFile.getAbsolutePath()+"\" might not exist or is broken");
 					}
 				}
 
@@ -110,7 +110,7 @@ public class XmlToCsv {
 	private static File findResourceFolder(File directory, int depth, int currentDepth){
 		File resDirectory = null;
 		
-		if(currentDepth > depth || !directory.isDirectory() || directory.getName().equals("bin")){
+		if(currentDepth > depth || directory == null || !directory.isDirectory() || directory.getName().equals("bin")){
 			resDirectory = null;
 		} else {
 			if(directory.getName().equals("res")){
@@ -146,7 +146,7 @@ public class XmlToCsv {
 	 * @param path absolute path to csv file including file name
 	 * @return csv file
 	 */
-	private static File createCsvFile(String path){
+	private static File getCsvFile(String path){
 		if(path == null || path.equals("")){
 			path = "androidStringResources.csv";
 		}
@@ -154,7 +154,7 @@ public class XmlToCsv {
 		File csvFile = new File(path);
 		File parentFile = csvFile.getParentFile();
 		
-		if(!parentFile.exists() && !parentFile.mkdirs()){
+		if(parentFile == null || (!parentFile.exists() && !parentFile.mkdirs())){
 		    return null;
 		}
 		return csvFile;
@@ -214,10 +214,15 @@ public class XmlToCsv {
 					!resourceValue.startsWith("@string/") &&
 					!resourceValue.startsWith("@array/")){
 					
+					// replace line break with space
 					if(resourceValue.contains("\n")){
-						System.out.println("[WARNING]: String resource " + resourceName + "contains line breaks." +
-								" Generated csv file might be invalid!");
+						resourceValue = resourceValue.replaceAll("(\\t|\\r?\\n)+", " ");
+						System.out.println("[WARNING]: String resource " + resourceName + "contained line breaks." +
+								" Replaced line breaks with space to ensure a valid csv file!");
 					}
+					
+					// replace multiple spaces with one space
+					resourceValue = resourceValue.trim().replaceAll(" +", " ");
 					
 					return new String[]{resourceName, resourceValue};
 				}
